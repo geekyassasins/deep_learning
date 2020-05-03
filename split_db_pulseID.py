@@ -18,7 +18,9 @@ def split_db_pulseID(path_df, fs, chunk_time, percentage_validation, percentage_
     chunk_size = fs * chunk_time
 
     # --------------------- Load Dataframe ------------------------ #
-    df = pd.read_pickle(path_df)
+    df = pd.read_pickle("./DataFrame_PulseID.pkl")
+    #print(df.shape)
+    
 
     # --------------- Dataframe adaptation for CNN ---------------- #
     columns = ['ID', 'Experiment', 'Time', 'PPG', 'PPG_GDF']
@@ -28,12 +30,14 @@ def split_db_pulseID(path_df, fs, chunk_time, percentage_validation, percentage_
     tmp_signalDF = pd.DataFrame([[empty_np, empty_np, empty_np, empty_np, empty_np]],
                          columns=columns)
     i=0
+    #print(df.shape[0])
 
     #DATAFRAME ADAPTATION
     while i < df.shape[0]:  # Iteration for each experiment and user
         subject_to_work = df.iloc[i]
+        #print(subject_to_work['ID'])
 
-        if subject_to_work['Experiment'] > 2:
+        if (subject_to_work['Experiment']) > 2:
             previous_id = subject_to_work['ID']
             while (i < df.shape[0] and previous_id == df.iloc[i]['ID']):
                 signalDF2 = pd.DataFrame([[df.iloc[i]['ID'],
@@ -52,8 +56,9 @@ def split_db_pulseID(path_df, fs, chunk_time, percentage_validation, percentage_
 
             tmp_signalDF = pd.DataFrame([[empty_np, empty_np, empty_np, empty_np, empty_np]],
                                         columns=columns)
+            #print(signalDF.shape)
 
-            if signalDF.shape[0] < 4:
+            if (signalDF.shape[0] < 4) & (signalDF.shape[0] >2 ):
                 experiment_id_group = 345
                 subject_to_work = pd.DataFrame([[signalDF.iloc[0]['ID'],
                                              experiment_id_group,
@@ -67,6 +72,7 @@ def split_db_pulseID(path_df, fs, chunk_time, percentage_validation, percentage_
                                                      signalDF.iloc[1]['PPG_GDF'],
                                                      signalDF.iloc[2]['PPG_GDF']),axis=0)]],
                                           columns=columns)
+
 
 
             elif signalDF.shape[0] >= 4:
@@ -90,9 +96,10 @@ def split_db_pulseID(path_df, fs, chunk_time, percentage_validation, percentage_
             # ------------------------------------------------------------------------------------------------
             signalDF = pd.DataFrame([[empty_np, empty_np, empty_np, empty_np, empty_np]], columns=columns)
 
-
-        if int(subject_to_work['Experiment']) > 2:
-            for s in range(floor(len(subject_to_work['Time'][0]) / chunk_size)):  # Iteration for each each chunk of data
+        #print(int(subject_to_work['Experiment']))
+        if int(subject_to_work['Experiment']) > 2 :
+                       
+            for s in range(floor(subject_to_work[0].size / chunk_size)):  # Iteration for each each chunk of data
                 newDF2 = pd.DataFrame([[subject_to_work['ID'].values[0],
                                         subject_to_work['Experiment'].values[0],
                                         subject_to_work['Time'][0][(s) * chunk_size:(s + 1) * chunk_size],
@@ -100,6 +107,7 @@ def split_db_pulseID(path_df, fs, chunk_time, percentage_validation, percentage_
                                         subject_to_work['PPG_GDF'][0][(s) * chunk_size:(s + 1) * chunk_size]]],
                                       columns=columns)
                 newDF = newDF.append(newDF2)
+                #print(df.shape)
         else:
             for s in range(floor(subject_to_work['Time'].size / chunk_size)):  # Iteration for each each chunk of data
                 newDF2 = pd.DataFrame([[subject_to_work['ID'],
@@ -109,22 +117,29 @@ def split_db_pulseID(path_df, fs, chunk_time, percentage_validation, percentage_
                                         subject_to_work['PPG_GDF'][(s) * chunk_size:(s + 1) * chunk_size]]],
                                       columns=columns)
                 newDF = newDF.append(newDF2)
+                #print(newDF)
             i+=1
+    #print(newDF)
+    df = newDF[0:]
+    
+    #print(df)
 
-    df = newDF[1:]
-
-    df = df.reset_index(drop=True)
-    num_subjects = df.iloc[-1]['ID']
+    df=df.reset_index(drop=True)
+    #print(df)
+    num_subjects = df.iloc[:-1]['ID']
 
 #########################################################################################
    # ----------------- Split data in Train/Test ------------------ #
     df.insert(1, "Split", "")
-    segments = df['ID'].tolist()
-    for k in range(0, num_subjects+1):
+    #print(df)
+    segments = df['ID']
+    print(segments[0])
+    for k in range(0, 220):
+        #print(segments.count(k))
         num_segments.append(segments.count(k))
 
     cont_validation = 1
-    previous_id = df.iloc[0]['ID']
+    previous_id = 0
     cont_test = 0
 
     for i, row in df.iterrows():
@@ -164,4 +179,4 @@ def split_db_pulseID(path_df, fs, chunk_time, percentage_validation, percentage_
             df.loc[i, 'Split'] = 'Zscore'
 
     # df.to_csv('Splitted_DF_PulseID.csv', sep='\t', encoding='utf-8')  # Export DataFrame to .csv
-    return df, num_subjects, num_segments
+    return df, 100, num_segments
